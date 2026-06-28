@@ -113,28 +113,47 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: v${{ env.GAME_VERSION }}.${{ github.run_number }}
         run: |
           set -eu
-          echo "::group::Diagnostics"
-          gh --version
-          gh auth status || true
-          echo "Tag: $RELEASE_TAG"
-          echo "Repo: ${{ github.repository }}"
-          echo "Archive: $ARCHIVE"
-          ls -la "$ARCHIVE" || true
-          echo "::endgroup::"
-          if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+          echo "Tag: $RELEASE_TAG | Repo: ${{ github.repository }}"
+          ls -la "$ARCHIVE"
+          # Check if release already exists (API call, tolerate 404)
+          existing=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$RELEASE_TAG" \
+            || echo '{}')
+          if echo "$existing" | grep -q '"id"'; then
             echo "Release $RELEASE_TAG already exists – skipping."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" \
-            "$ARCHIVE" \
-            --repo "${{ github.repository }}" \
-            --target "${{ github.event.repository.default_branch }}" \
-            --title "Game of Life $RELEASE_TAG" \
-            --notes "Automated release from commit ${{ github.sha }} (run #${{ github.run_number }})."
+          # Create release via REST API (deterministic, returns clear JSON errors)
+          resp=$(curl -fsSL -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -d "{\"tag_name\":\"$RELEASE_TAG\",\"target_commitish\":\"${{ github.event.repository.default_branch }}\",\"name\":\"Game of Life $RELEASE_TAG\",\"body\":\"Automated release from commit ${{ github.sha }} (run #${{ github.run_number }}).\",\"draft\":false,\"prerelease\":false}")
+          http_code=$(echo "$resp" | tail -1)
+          body=$(echo "$resp" | sed '$d')
+          echo "HTTP $http_code"
+          echo "$body"
+          if [ "$http_code" != "201" ]; then
+            echo "::error::Release creation failed (HTTP $http_code)"; exit 1
+          fi
+          release_id=$(echo "$body" | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
+          # Upload asset
+          upload_url="https://uploads.github.com/repos/${{ github.repository }}/releases/$release_id/assets?name=$(basename "$ARCHIVE")"
+          aresp=$(curl -fsSL -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@$ARCHIVE" \
+            "$upload_url" || true)
+          echo "asset upload: $aresp"
 
   pages:
     name: Deploy to GitHub Pages
