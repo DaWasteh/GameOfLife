@@ -117,6 +117,14 @@ jobs:
           RELEASE_TAG: v${{ env.GAME_VERSION }}.${{ github.run_number }}
         run: |
           set -eu
+          echo "::group::Diagnostics"
+          gh --version
+          gh auth status || true
+          echo "Tag: $RELEASE_TAG"
+          echo "Repo: ${{ github.repository }}"
+          echo "Archive: $ARCHIVE"
+          ls -la "$ARCHIVE" || true
+          echo "::endgroup::"
           if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "Release $RELEASE_TAG already exists – skipping."
             exit 0
@@ -126,8 +134,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.event.repository.default_branch }}" \
             --title "Game of Life $RELEASE_TAG" \
-            --generate-notes \
-            --latest
+            --notes "Automated release from commit ${{ github.sha }} (run #${{ github.run_number }})."
 
   pages:
     name: Deploy to GitHub Pages
