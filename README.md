@@ -1,6 +1,8 @@
 # Conway's Game of Life – Adaptive Canvas Pro
 
-[![Build & Deploy](https://github.com/Sebas/gameOfLife/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Sebas/gameOfLife/actions/workflows/build-deploy.yml)
+[![Build & Deploy](https://github.com/DaWasteh/GameOfLife/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/DaWasteh/GameOfLife/actions/workflows/build-deploy.yml)
+
+🌐 **Live spielen:** <https://dawasteh.github.io/GameOfLife/>
 
 Eine interaktive, performante Implementierung von [Conway's Game of Life](https://de.wikipedia.org/wiki/Spiel_des_Lebens) mit Canvas-Rendering.
 
@@ -23,7 +25,7 @@ Keine Abhängigkeiten – einfach die HTML-Datei im Browser öffnen:
 game_of_life.html
 ```
 
-Oder direkt über GitHub Pages nutzen (nach Deployment).
+Oder direkt online spielen: **<https://dawasteh.github.io/GameOfLife/>**
 
 ## Lokaler Start
 
@@ -49,12 +51,13 @@ Dieses Projekt nutzt GitHub Actions für automatisierte Builds und Validierung:
 | `html-validate` | HTML-Validierung mit html-validate |
 | `build` | Build-Artifact erstellen |
 | `pages` | Auto-Deploy zu GitHub Pages (von `main`) |
+| `release` | Automatischer GitHub-Release mit ZIP-Asset bei Push auf `main` |
 
 ### Workflow auslösen
 
-- **Push auf `main` oder `master`** → Lint, Validate, Build, Deploy
-- **Pull Request** → Lint, Validate, Build (kein Deploy)
-- **Release publishen** → Release-Artifact erstellen
+- **Push auf `main`** → Lint, Validate, Build, Pages-Deploy **und automatischer Release** (Tag `v1.0.<run_number>`)
+- **Pull Request** → Lint, Validate, Build (kein Deploy/Release)
+- **Manueller Trigger** → vollständiger Lauf via `workflow_dispatch`
 
 ## Projektstruktur
 
